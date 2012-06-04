@@ -2,6 +2,8 @@
 
 ;;;; Utilities
 
+(in-package :wiz-util)
+
 ;;;; Control Flow Macros
 
 ;;; We define iteration macros to match the book's pseudo-code.

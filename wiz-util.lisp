@@ -1,102 +1,42 @@
 ;;; -*- Coding: utf-8; Mode: Lisp; Syntax: Common-Lisp; -*-
 
-(defpackage :wiz-util
-  (:use :common-lisp)
-  (:nicknames :wiz)
-  (:export :mac :nlet :mlet :while
-	   :sfor :n-times :saccumulate :ssum :saverage :sprod :summation :product
-	   :last1 :single? :mklist :append1 :nconc1 :existp :split
-	   :exclusive-or :pow :tak :debug-print :make-number-list
-	   :min-position :max-position :general-max/min :filter :grouping :remove-nth
-	   :position-if-list :format-list :direct-product
-	   :n-times-collect :square :sgn :index-list->scalar-index :scalar-index->index-list
-	   :random-from-probability-list :d :with-open-multiple-file :flatten :nthcar :assoc-ref))
-
 (in-package :wiz-util)
-
-;;; マクロを一階層展開して表示するマクロ.
-(defmacro mac (expression)
-  `(pprint (macroexpand-1 (quote ,expression))))
 
 ;;; nlet ; named-let ; 名前付きlet
 ;;  Schemeのnamed-letと同じ、繰り返し構造の簡易表現
-(defmacro nlet (tag var-vals &body body)
-  `(labels ((,tag ,(mapcar #'car var-vals) ,@body))
-     (declare (optimize (speed 3))) ; for tail recursion optimization
-     (,tag ,@(mapcar #'cadr var-vals))))
+;; (defmacro nlet (tag var-vals &body body)
+;;   `(labels ((,tag ,(mapcar #'car var-vals) ,@body))
+;;      (declare (optimize (speed 3))) ; for tail recursion optimization
+;;      (,tag ,@(mapcar #'cadr var-vals))))
 
-;; ;; from LOL
-;; (defun mkstr (&rest args)
-;;   (with-output-to-string (s)
-;;     (dolist (a args) (princ a s))))
-
-;; (defun symb (&rest args)
-;;   (values (intern (apply #'mkstr args))))
-
-;; (defun g!-symbol-p (s)
-;;   (and (symbolp s)
-;;        (> (length (symbol-name s)) 2)
-;;        (string= (symbol-name s)
-;;                 "G!"
-;;                 :start1 0
-;;                 :end1 2)))
-
-;; (defmacro defmacro/g! (name args &rest body)
-;;   (let ((syms (remove-duplicates
-;;                 (remove-if-not #'g!-symbol-p
-;;                                (flatten body)))))
-;;     `(defmacro ,name ,args
-;;        (let ,(mapcar
-;;                (lambda (s)
-;;                  `(,s (gensym ,(subseq
-;;                                  (symbol-name s)
-;;                                  2))))
-;;                syms)
-;;          ,@body))))
-
-;; (defun o!-symbol-p (s)
-;;   (and (symbolp s)
-;;        (> (length (symbol-name s)) 2)
-;;        (string= (symbol-name s)
-;;                 "O!"
-;;                 :start1 0
-;;                 :end1 2)))
-
-;; (defun o!-symbol-to-g!-symbol (s)
-;;   (symb "G!"
-;;         (subseq (symbol-name s) 2)))
-
-;; (defmacro defmacro! (name args &rest body)
-;;   (let* ((os (remove-if-not #'o!-symbol-p args))
-;;          (gs (mapcar #'o!-symbol-to-g!-symbol os)))
-;;     `(defmacro/g! ,name ,args
-;;        `(let ,(mapcar #'list (list ,@gs) (list ,@os))
-;;           ,(progn ,@body)))))
-
-;; ;; 従来型のnletは実は末尾再帰呼出しじゃなくても使えるが、これは厳密に末尾再帰呼出しである必要がある
-;; (defmacro! nlet-tail (n letargs &rest body)
-;;   (let ((gs (loop for i in letargs
-;; 		 collect (gensym))))
-;;     `(macrolet
-;; 	 ((,n ,gs
-;; 	    `(progn
-;; 	       (psetq
-;; 		,@(apply #'nconc
-;; 			 (mapcar
-;; 			  #'list
-;; 			  ',(mapcar #'car letargs)
-;; 			  (list ,@gs))))
-;; 	       (go ,',g!n))))
-;;        (block ,g!b
-;; 	 (let ,letargs
-;; 	   (tagbody
-;; 	      ,g!n (return-from
-;; 		    ,g!b (progn ,@body))))))))
-
+;; 従来型のnletは実は末尾再帰呼出しじゃなくても使えるが、これは厳密に末尾再帰呼出しである必要がある
+(defmacro! nlet (tag letargs &rest body)
+  (let ((gs (loop for i in letargs
+		 collect (gensym))))
+    `(macrolet
+	 ((,tag ,gs
+	    `(progn
+	       (psetq
+		,@(apply #'nconc
+			 (mapcar
+			  #'list
+			  ',(mapcar #'car letargs)
+			  (list ,@gs))))
+	       (go ,',g!n))))
+       (block ,g!b
+	 (let ,letargs
+	   (tagbody
+	      ,g!n (return-from
+		    ,g!b (progn ,@body))))))))
 
 ;;; mlet ; 多重let
-;; 値のリストの要素をシンボルのリストの要素に束縛するletのシンタックスシュガー
+;; destructuring-bind とほぼ同じ
 (defmacro mlet (symbols value-list &body body)
+  "Evaluate the body with binding each value of value-list to the symbols.
+Examples: 
+(mlet (a b c) '(1 2 3)
+  (list a b c))
+=> (1 2 3)"
   `(apply (lambda ,symbols ,@body) ,value-list))
 
 ;;; while 驚くべきことに標準では入っていない.
@@ -104,6 +44,13 @@
   `(do ()
     ((not ,test))
     ,@body))
+
+;;; dolist-with-counter 
+(defmacro dolist-with-counter ((list-elem-var counter-var list) &body body)
+  `(let ((,counter-var 0))
+     (dolist (,list-elem-var ,list)
+       ,@body
+       (incf ,counter-var))))
 
 ;; sfor ; simple for
 ;;  (sfor (i 0 10)
@@ -129,6 +76,7 @@
     (rec ,m 1)))
 
 ;;; saccumulate (SICP)
+;;; reduceとほぼ等価
 (defun saccumulate (op initial sequence)
   (nlet itr ((seq sequence)
 	     (prod initial))
@@ -163,34 +111,6 @@
     (if (> ,index ,end)
 	product
 	(iter (* (progn ,@body) product) (1+ ,index)))))
-		 
-;;; On Lisp Chapter 4 Utirity Functions
-
-(proclaim '(inline last1 single append1 conc1 mklist))
-
-;;; List Operator
-;; Return last element of list.
-(defun last1 (lst)
-  (car (last lst)))
-
-;; Return true if the list consist of only one element.
-(defun single? (lst)
-  (and (consp lst)
-       (not (cdr lst))))
-
-;; make list; nevertheless argument is atom.
-(defun mklist (obj)
-  (if (listp obj)
-      obj
-      (list obj)))
-
-;; append atom to list.
-(defun append1 (lst obj)
-  (append lst (list obj)))
-
-;; append atom to list (with side effect).
-(defun nconc1 (lst obj)
-  (nconc lst (list obj)))
 
 ;; lstにpredを満たすような要素が存在するならその要素を返す.
 (defun existp (pred lst)
@@ -211,6 +131,14 @@
 	(itf (1+ i)
 	     (cons (car remainder) product)
 	     (cdr remainder)))))
+
+;; リストをn等分する
+(defun split-equally (lst n)
+  (let ((m (floor (length lst) n)))
+    (nlet iter ((lst lst) (product nil))
+      (if (< (length lst) m)
+	  (nreverse (cons (append (car product) lst) (cdr product)))
+	  (iter (nthcdr m lst) (cons (nthcar m lst) product))))))
 
 ;;; 排他的論理和
 (defmacro exclusive-or (a b)
@@ -240,18 +168,21 @@
     (format t "~A => ~A~%" pre-exp exp)
     exp)
 
-(set-macro-character
-   #\@
-   #'(lambda (stream char)
-       char ;for avoid Style-Warning
+;; (set-macro-character
+;;  #\?
+;;  #'(lambda (stream char)
+;;      char ;for avoid Style-Warning
+;;      (let ((read-data (read stream t nil t)))
+;;        `(debug-print (quote ,read-data) ,read-data))))
+
+;;; @は他のライブラリでマクロ文字として多用されるため、Gaucheのデバックプリント風の2ストローク表記に
+;;(make-dispatch-macro-character #\?)
+
+(set-dispatch-macro-character #\# #\=
+   #'(lambda (stream char1 char2)
+       (declare (ignore char1 char2))
        (let ((read-data (read stream t nil t)))
 	 `(debug-print (quote ,read-data) ,read-data))))
-
-;; (set-dispatch-macro-character #\# #\=
-;;    #'(lambda (stream char1 char2)
-;;        (declare (ignore char1 char2 char3)) ;for avoid Style-Warning
-;;        (let ((read-data (read stream t nil t)))
-;; 	 `(debug-print (quote ,read-data) ,read-data))))
 
 ;;; デリミタリードマクロ
 ;;; 例. #[2 7] => (2 3 4 5 6 7)
@@ -294,17 +225,6 @@
 		 max/min-elem
 		 (car lst))
 	     (cdr lst)))))
-
-;;; remove-if-notと同じ
-(defun filter (proc lst)
-  (nlet iter ((product '())
-	      (lst lst))
-    (if (null lst)
-	(nreverse product)
-	(if (funcall proc (car lst))
-	    (iter (cons (car lst) product)
-		  (cdr lst))
-	    (iter product (cdr lst))))))
 
 ;;; 複数の述語でリストをグルーピングする
 ;; (grouping (list #'numberp #'symbolp) '(a 1 b 2 c 3))
@@ -432,6 +352,14 @@
 	       (cons remainder i-lst)
 	       (/ (- num remainder) (car dim-lst)))))))
 
+;;; 基数が固定の場合
+(defun radix-num-list->scalar (radix radix-num-list)
+  (index-list->scalar-index (make-list (length radix-num-list) :initial-element radix) radix-num-list))
+
+;;; 2進リストの場合
+(defun binary-list->scalar (binary-list)
+  (radix-num-list->scalar 2 binary-list))
+
 ;;; 総和が1になるような確率のリストからその確率分布に従ってサンプルし,位置を返す
 (defun random-from-probability-list (probability-list)
   (let ((prob-sum-list
@@ -448,7 +376,16 @@
 
 ;;; describeのラッパー
 (defun d (object)
+  "wrapper of describe."
   (describe object))
+
+;;; documentationのラッパー
+(defun doc (name-symbol)
+  "simplified documentation function."
+  (aif (documentation name-symbol 'function)
+       (format t "~A~%" it))
+  (aif (documentation name-symbol 'variable)
+       (format t "~A~%" it)))
 
 ;;; 複数のファイルストリームを開いて何かするマクロ
 ;; ; before
@@ -472,16 +409,6 @@
 		,(if body (cons 'progn body) product))
 	     nil))))
 
-;;; リストの入れ子構造をなくす(木構造の葉のみからなるリストを返す)
-(defun flatten (x)
-  (labels ((rec (x acc)
-             (cond ((null x) acc)
-                   ((atom x) (cons x acc))
-                   (t (rec
-                        (car x)
-                        (rec (cdr x) acc))))))
-    (rec x nil)))
-
 ;;; 標準ではnthcdrがあってnthcarがないので
 (defun nthcar (n list)
   (nlet itr ((n n)
@@ -493,3 +420,226 @@
 
 (defun assoc-ref (item alist)
   (cadr (assoc item alist)))
+
+;;; リングバッファ
+(defstruct ring-buffer
+  (size 0)
+  (buffer nil)
+  (average 0d0)
+  (tail 0))
+
+;; リングバッファにデータをプッシュし、最も古いデータがポップされ、返される(バッファのサイズは一定)
+;; 2乗の平均から平均の2乗を引くことで分散が求められる
+(defun rb-push! (ring-buffer datum)
+  (let ((size (ring-buffer-size ring-buffer)))
+    (cond ((zerop size)
+           (error "ring-buffer size must be set initially."))
+          ;; bufferが空のとき
+          ((null (ring-buffer-buffer ring-buffer))
+           (setf (ring-buffer-buffer ring-buffer)
+                 (make-array size :initial-element datum))
+           (setf (ring-buffer-average ring-buffer) datum)
+           (setf (ring-buffer-tail ring-buffer) (1- size))
+           datum)
+          ;; bufferに何か入っているとき
+          (t
+           (let* ((pop-datum-position (mod (1+ (ring-buffer-tail ring-buffer)) size))
+                  (pop-datum (svref (ring-buffer-buffer ring-buffer) pop-datum-position)))
+             (setf (svref (ring-buffer-buffer ring-buffer) pop-datum-position) datum) ; push
+             (setf (ring-buffer-average ring-buffer)
+                   (+ (ring-buffer-average ring-buffer)
+                      (/ (- datum pop-datum) size)))
+             (setf (ring-buffer-tail ring-buffer) pop-datum-position)
+             pop-datum)))))
+
+;; (defstruct ring-buffer
+;;   (size 0)
+;;   (buffer nil)
+;;   (sum 0d0)
+;;   (tail 0))
+
+;; (defun ring-buffer-average (ring-buffer)
+;;   (/ (ring-buffer-sum ring-buffer)
+;;      (ring-buffer-size ring-buffer)))
+
+(defun rb-latest-elem (ring-buffer)
+  (let ((buff (ring-buffer-buffer ring-buffer))
+	(tail (ring-buffer-tail ring-buffer)))
+    (if buff (aref buff tail))))
+
+;; ;; リングバッファにデータをプッシュし、最も古いデータがポップされ、返される(バッファのサイズは一定)
+;; ;; 2乗の平均から平均の2乗を引くことで分散が求められる
+;; (defun rb-push! (ring-buffer datum)
+;;   (let ((size (ring-buffer-size ring-buffer)))
+;;     (cond ((zerop size)
+;; 	   (error "ring-buffer size must be set initially."))
+;; 	  ;; bufferが空のとき
+;; 	  ((null (ring-buffer-buffer ring-buffer))
+;; 	   (setf (ring-buffer-buffer ring-buffer)
+;; 		 (make-array size :initial-element datum))	   
+;; 	   (setf (ring-buffer-sum ring-buffer) (* datum (ring-buffer-size ring-buffer)))
+;; 	   (setf (ring-buffer-tail ring-buffer) (1- size))
+;; 	   datum)
+;; 	  ;; bufferに何か入っているとき
+;; 	  (t
+;; 	   (let* ((pop-datum-position (mod (1+ (ring-buffer-tail ring-buffer)) size))
+;; 		  (pop-datum (svref (ring-buffer-buffer ring-buffer) pop-datum-position)))
+;; 	     (setf (svref (ring-buffer-buffer ring-buffer) pop-datum-position) datum) ; push
+;; 	     (setf (ring-buffer-sum ring-buffer)
+;; 		   (+ (ring-buffer-sum ring-buffer) datum (- pop-datum)))
+;; 	     (setf (ring-buffer-tail ring-buffer) pop-datum-position)
+;; 	     pop-datum)))))
+
+;; 不偏分散の平方根
+(defun rb-standard-deviation (ring-buffer)
+  (let ((ave (ring-buffer-average ring-buffer))
+	(buff (ring-buffer-buffer ring-buffer))
+	(size (ring-buffer-size ring-buffer)))
+    (sqrt (/ (loop for i from 0 to (1- size)
+		summing (square (- ave (aref buff i))))
+	     (1- size)))))
+       
+;; リングバッファに現在入っているデータのベクタを取り出す
+(defun rb-get-sequence (ring-buffer)
+  (let ((size (ring-buffer-size ring-buffer))
+	(tail (ring-buffer-tail ring-buffer))
+	(buff (ring-buffer-buffer ring-buffer))
+	(product (make-array (ring-buffer-size ring-buffer))))
+    (loop for i from 0 to (1- size)
+	 do (if (<= i tail)
+		(let ((queue-position (+ (- (1- size) tail) i)))
+		  (setf (aref product queue-position) (aref buff i)))
+		(let ((queue-position (1- (- i tail))))
+		  (setf (aref product queue-position) (aref buff i)))))
+    product))
+
+;; リングバッファに入っているレートから差分系列ベクタを取り出す
+;; 差分系列なのでリングバッファのサイズよりは1つ短くなる
+(defun rb-get-difference-sequence (ring-buffer)
+  (let* ((size (ring-buffer-size ring-buffer))
+	 (seq  (rb-get-sequence ring-buffer))
+	 (diff (make-array (1- size))))
+    (loop for i from 1 to (1- size)
+	 do (setf (aref diff (1- i)) (- (aref seq i)  (aref seq (1- i)))))
+    diff))
+
+(defun rb-top-elem (rb)
+  (svref (ring-buffer-buffer rb) (mod (1+ (ring-buffer-tail rb)) (ring-buffer-size rb))))
+
+(defun rb-tail-elem (rb)
+  (svref (ring-buffer-buffer rb) (ring-buffer-tail rb)))
+
+(defun rb-min/max (rb)
+  (loop for i from 0 to (1- (ring-buffer-size rb))
+	maximizing (svref (ring-buffer-buffer rb) i) into max
+	minimizing (svref (ring-buffer-buffer rb) i) into min
+	finally (return (values min max))))
+
+;;; リストを移動平均で平滑化する
+(defun smoothing-list (list sma)
+  (nlet iter ((rb (make-ring-buffer :size sma))
+	      (list list)
+	      (product nil))
+    (if (null list)
+	(nreverse product)
+	(progn
+	  (rb-push! rb (car list))
+	  (iter rb (cdr list) (cons (ring-buffer-average rb) product))))))
+
+(defun smoothing-list-roughly (list sma)
+  (nlet iter ((rb (make-ring-buffer :size sma))
+	      (list list)
+	      (product nil)
+	      (cnt sma))
+    (if (null list)
+	(nreverse product)
+	(progn
+	  (rb-push! rb (car list))
+	  (if (zerop cnt)
+	      (iter rb (cdr list) (cons (ring-buffer-average rb) product) sma)
+	      (iter rb (cdr list) product (1- cnt)))))))
+
+;; 一様分布からのサンプリング
+(defun random-uniform (start end)
+  (+ (random (- end start)) start))
+
+;; Box-Muller法による1次元正規分布のサンプリング
+(defun random-normal (&key (mean 0d0) (sd 1d0))
+  (let ((alpha (random 1.0d0))
+	(beta  (random 1.0d0)))
+    (+ (* sd
+	  (sqrt (* -2 (log alpha)))
+	  (sin (* 2 pi beta)))
+       mean)))
+
+(defun seq (start end &key (by 1) (n nil))
+  (if n
+      (loop for i from start to end by (/ (- end start) n) collect i)
+      (nlet itf ((i end)
+		 (product '()))
+	(if (< i start)
+	    product
+	    (itf (- i by) (cons i product))))))
+
+;;; OOP utilities
+
+;; defclass-simplified: Simplified definition of classes which similar to definition of structure.
+(defmacro defclass$ (class-name superclass-list &body body)
+  "Simplified definition of classes which similar to definition of structure.
+ [Example]
+  (defclass$ agent (superclass1 superclass2)
+    currency
+    position-list
+    (position-upper-bound 1)
+    log
+    money-management-rule)
+=> #<STANDARD-CLASS AGENT>"
+  `(defclass ,class-name (,@superclass-list)
+     ,(mapcar (lambda (slot)
+		(let* ((slot-symbol (if (listp slot) (car slot) slot))
+		       (slot-name (symbol-name slot-symbol))
+		       (slot-initval (if (listp slot) (cadr slot) nil)))
+		  (list slot-symbol
+			:accessor (intern (concatenate 'string slot-name "-OF"))
+			:initarg (intern slot-name :KEYWORD)
+			:initform slot-initval)))
+	      body)))
+
+;;; 真理値のリストを取って、論理積/論理和をとる関数
+;; and/orはマクロなので(apply #'and '(t nil t))のようなことができない。
+(defun andf (truth-val-list)
+  (cond ((null truth-val-list) t)
+	((car truth-val-list) (andf (cdr truth-val-list)))
+	(t nil)))
+
+(defun orf (truth-val-list)
+  (cond ((null truth-val-list) nil)
+	((car truth-val-list) t)
+	(t (orf (cdr truth-val-list)))))
+
+;;; Clojure風の無名関数のためのシンタックスシュガー
+;;; 使用例: #L(* $1 $1) で1引数を取って二乗する無名関数に展開される
+;;;         #2L(* $1 $2) で2引数を取って積を返す無名関数に展開される
+(defun sharpL-reader (stream sub-char numarg)
+  (declare (ignore sub-char))
+  (unless numarg (setq numarg 1))
+  `(lambda ,(loop for i from 1 to numarg collect (symb '$ i))
+     ,(read stream t nil t)))
+
+(set-dispatch-macro-character #\# #\L #'sharpL-reader)
+
+;;; リストから階差数列を作って返す関数
+(defun diff-list (lst)
+  (nlet iter ((lst lst)
+	      (product nil))
+    (let ((cdr-lst (cdr lst)))
+      (if (null cdr-lst)
+	  (nreverse product)
+	  (iter cdr-lst (cons (- (car cdr-lst) (car lst)) product))))))
+
+(defun multiple? (n m)
+  "Return whether n is a multiple of m.
+Examples:
+  (multiple? 12 3) => t
+  (multiple? 11 3) => nil"
+  (zerop (mod n m)))
