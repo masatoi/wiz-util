@@ -186,20 +186,20 @@ Examples:
 
 ;;; デリミタリードマクロ
 ;;; 例. #[2 7] => (2 3 4 5 6 7)
-(defun make-number-list (start end)
-  (nlet iter ((i start)
-	      (product nil))
-	(if (> i end)
-	    product
-	    (iter (1+ i) (append1 product i)))))
+;; (defun make-number-list (start end)
+;;   (nlet iter ((i start)
+;; 	      (product nil))
+;; 	(if (> i end)
+;; 	    product
+;; 	    (iter (1+ i) (append1 product i)))))
 
-(set-macro-character #\] (get-macro-character #\)))
-(set-dispatch-macro-character #\# #\[
-  #'(lambda (stream char1 char2)
-      char1 ;for avoid Style-Warning
-      char2
-      (let ((pair (cons 'list (read-delimited-list #\] stream t)))) ;先の例だと(2 7)
-	`(apply #'make-number-list ,pair))))
+;; (set-macro-character #\] (get-macro-character #\)))
+;; (set-dispatch-macro-character #\# #\[
+;;   #'(lambda (stream char1 char2)
+;;       char1 ;for avoid Style-Warning
+;;       char2
+;;       (let ((pair (cons 'list (read-delimited-list #\] stream t)))) ;先の例だと(2 7)
+;; 	`(apply #'make-number-list ,pair))))
 
 ;; リストの中で最大/最小の値を持つ要素の位置を返す関数
 (defun min-position (lst)
@@ -373,6 +373,24 @@ Examples:
 	(rand (random 1.0d0)))
     (position-if (lambda (x)
 		   (< rand x)) prob-sum-list)))
+
+;;; for bit-vector
+
+(defun bit-vector->integer (bit-vector)
+  "Create a positive integer from a bit-vector."
+  (reduce #'(lambda (first-bit second-bit)
+              (+ (* first-bit 2) second-bit))
+          bit-vector))
+
+(defun integer->bit-vector (integer)
+  "Create a bit-vector from a positive integer."
+  (labels ((integer->bit-list (int &optional accum)
+             (cond ((> int 0)
+                    (multiple-value-bind (i r) (truncate int 2)
+                      (integer->bit-list i (push r accum))))
+                   ((null accum) (push 0 accum))
+                   (t accum))))
+    (coerce (integer->bit-list integer) 'bit-vector)))
 
 ;;; describeのラッパー
 (defun d (object)
@@ -643,3 +661,49 @@ Examples:
   (multiple? 12 3) => t
   (multiple? 11 3) => nil"
   (zerop (mod n m)))
+
+;;; cl-muprocによる並列化版のmapcar。pmapcar*は返値のリストが終わった順になる。
+(defun pmapcar (fn lis &key (timeout-sec 100))
+  (labels ((gather (lis)
+             (if (null lis) nil
+	       (muproc:mumsg-receive (from)
+		 ((value key) (eq key (car lis))
+		  (cons value (gather (cdr lis))))))))
+    (muproc:muprocn (timeout-sec)
+      (muproc:muproc-with-registered-port (:self)
+        (gather
+         (mapcar #'(lambda (i)
+                     (let ((key (gensym)))
+                       (muproc:muproc-spawn
+                        key
+                        #'(lambda ()
+                            (muproc:mumsg-send :self :value (funcall fn i) :key key))
+                        ()
+                        :errorstream *trace-output*)
+                       key))
+                 lis))))))
+
+(defun pmapcar* (fn lis  &key (timeout-sec 100))
+  (labels ((gather (n lis)
+             (if (zerop n) lis
+                 (muproc:mumsg-receive (from)
+                   ((value) t
+                    (gather (1- n) (cons value lis)))))))
+    (muproc:muprocn (timeout-sec)
+      (muproc:muproc-with-registered-port (:self)
+        (gather
+         (reduce #'(lambda (count i)
+                     (muproc:muproc-spawn
+                      (gensym)
+                      #'(lambda ()
+                          (muproc:mumsg-send :self :value (funcall fn i)))
+                      () :errorstream *trace-output*)
+                     (1+ count))
+                 lis :initial-value 0)
+         nil)))))
+
+(defun map-tree (fn tree)
+  (cond ((null tree) nil)
+	((atom tree) (funcall fn tree))
+	(t (cons (map-tree fn (car tree))
+		 (map-tree fn (cdr tree))))))

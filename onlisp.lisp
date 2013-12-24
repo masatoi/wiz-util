@@ -70,12 +70,13 @@
                    (nreverse (cons source acc))))))
     (if source (rec source nil) nil)))
 
-(defun flatten (x)
-  (labels ((rec (x acc)
-             (cond ((null x) acc)
-                   ((atom x) (cons x acc))
-                   (t (rec (car x) (rec (cdr x) acc))))))
-    (rec x nil))) 
+;; (defun flatten (x)
+;;   (labels ((rec (x acc)
+;;              (cond ((null x) acc)
+;;                    ((atom x) (cons x acc))
+;;                    (t (rec (car x) (rec (cdr x) acc))))))
+;;     (rec x nil)))
+
 
 (defun prune (test tree)
   (labels ((rec (tree acc)
@@ -172,8 +173,8 @@
       ((funcall test-fn i) (nreverse result))
     (push (funcall fn i) result)))
 
-(defun mappend (fn &rest lsts)
-  (apply #'append (apply #'mapcar fn lsts)))
+;; (defun mappend (fn &rest lsts)
+;;   (apply #'append (apply #'mapcar fn lsts)))
 
 (defun mapcars (fn &rest lsts)
   (let ((result nil))
@@ -244,15 +245,15 @@
 ;;; 関数のリストを受取り、最後の関数から順番に適用していく関数を返す
 ;;; 最後の関数は任意個の引数を取るが、残りは1引数
 ;;; 例: (funcall (compose #'round #'sqrt #'+) 1 2 3) => 2
-(defun compose (&rest fns)
-  (if fns
-      (let ((fn1 (car (last fns)))
-            (fns (butlast fns)))
-        #'(lambda (&rest args)
-            (reduce #'funcall fns 
-                    :from-end t
-                    :initial-value (apply fn1 args))))
-      #'identity))
+;; (defun compose (&rest fns)
+;;   (if fns
+;;       (let ((fn1 (car (last fns)))
+;;             (fns (butlast fns)))
+;;         #'(lambda (&rest args)
+;;             (reduce #'funcall fns 
+;;                     :from-end t
+;;                     :initial-value (apply fn1 args))))
+;;       #'identity))
 
 (defun fif (if then &optional else)
   #'(lambda (x)
@@ -333,11 +334,11 @@
          (if ,(caar binds)
              (when-bind* ,(cdr binds) ,@body)))))
 
-(defmacro with-gensyms (syms &body body)
-  `(let ,(mapcar #'(lambda (s)
-                     `(,s (gensym)))
-                 syms)
-     ,@body))
+;; (defmacro with-gensyms (syms &body body)
+;;   `(let ,(mapcar #'(lambda (s)
+;;                      `(,s (gensym)))
+;;                  syms)
+;;      ,@body))
 
 (defmacro condlet (clauses &body body)
   (let ((bodfn (gensym))
@@ -516,11 +517,11 @@
                               ,body)))))))
       (rec pairs syms))))
 
-(defun shuffle (x y)
-  (cond ((null x) y)
-        ((null y) x)
-        (t (list* (car x) (car y) 
-                  (shuffle (cdr x) (cdr y))))))
+;; (defun shuffle (x y)
+;;   (cond ((null x) y)
+;;         ((null y) x)
+;;         (t (list* (car x) (car y) 
+;;                   (shuffle (cdr x) (cdr y))))))
 
 (defmacro mvdo (binds (test &rest result) &body body)
   (let ((label (gensym))
@@ -637,9 +638,9 @@
 ;;                  temps)
 ;;        ,@(mapcar #'fourth meths))))
 
-(defmacro aif (test-form then-form &optional else-form)
-  `(let ((it ,test-form))
-     (if it ,then-form ,else-form)))
+;; (defmacro aif (test-form then-form &optional else-form)
+;;   `(let ((it ,test-form))
+;;      (if it ,then-form ,else-form)))
 
 ;; (defmacro awhen (test-form &body body)
 ;;   `(aif ,test-form
@@ -665,9 +666,9 @@
 ;;                (let ((it ,sym)) ,@(cdr cl1))
 ;;                (acond ,@(cdr clauses)))))))
 
-(defmacro alambda (parms &body body)
-  `(labels ((self ,parms ,@body))
-     #'self))
+;; (defmacro alambda (parms &body body)
+;;   `(labels ((self ,parms ,@body))
+;;      #'self))
 
 ;; (defmacro ablock (tag &rest args)
 ;;   `(block ,tag

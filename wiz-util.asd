@@ -2,10 +2,10 @@
 
 (defsystem "wiz-util"
     :description "wiz-util: utility collections for my daily work."
-    :version "0.4"
+    :version "0.5"
     :author "Satoshi Imai <satoshi.imai@gmail.com>"
     :licence "Public Domain"
-    :depends-on (:external-program :alexandria :cl-fad)
+    :depends-on (:external-program :alexandria :cl-fad :cl-muproc :anaphora :metatilities)
     :components ((:file "packages")
 		 (:file "onlisp" :depends-on ("packages"))
 		 (:file "lol-for-nlet" :depends-on ("packages" "onlisp"))

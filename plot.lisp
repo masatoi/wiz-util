@@ -76,12 +76,12 @@
   ;; 画像出力する場合の設定
   (cond (output
 	 (ecase output-format
-	   (:pdf (format gp-file "set term pdf~%"))
+	   (:pdf (format stream "set term pdf~%"))
 	   (:eps (format stream "set term postscript eps enhanced color~%"))
 	   (:eps-monochrome (format stream "set term postscript eps enhanced monochrome~%"))
 	   (:png (format stream "set term png~%"))
-	   (:png-1280x1024 (format gp-file "set term png size 1280,1024~%"))
-	   (:png-2560x1024 (format gp-file "set term png size 2560,1024~%"))
+	   (:png-1280x1024 (format stream "set term png size 1280,1024~%"))
+	   (:png-2560x1024 (format stream "set term png size 2560,1024~%"))
 	   (:png-monochrome (format stream "set term png monochrome~%")))
 	 (format stream "set output \"~A\"~%" output))
 	(t (format stream "set term x11~%")))
@@ -120,44 +120,45 @@
 
 (defun plot-list (y-list
 		  &key (x-list nil) (title " ") (style 'lines)
-		  (x-label nil) (y-label nil)
-		  (aspect-ratio 1.0)
-		  (output nil) (output-format :png)
-		  (x-logscale nil) (y-logscale nil)
-		  (x-range nil) (y-range nil)
-		  (x-range-reverse nil) (y-range-reverse nil) (key t)
-		  (stream nil))
+		    (x-label nil) (y-label nil)
+		    (aspect-ratio 1.0)
+		    (output nil) (output-format :png)
+		    (x-logscale nil) (y-logscale nil)
+		    (x-range nil) (y-range nil)
+		    (x-range-reverse nil) (y-range-reverse nil) (key t)
+		    (stream nil))
   (if (null x-list) (setf x-list (loop for i from 0 to (1- (length y-list)) collect i)))
   ;; 長さチェック
   (if (not (= (length x-list) (length y-list)))
-      (error "list length mismatch detected between y-list and x-list."))
+    (error "list length mismatch detected between y-list and x-list."))
   ;; datファイルに出力
   (with-open-file (dat-file *tmp-dat-file* :direction :output :if-exists :supersede)
     (mapc #'(lambda (x y) (format dat-file "~f ~f~%" x y)) x-list y-list))
-  
-  (cond
-    (stream
-     (dump-gp-stream stream
-		     (format nil "\"~A\" using 1:2 with ~A title \"~A\""
-			     *tmp-dat-file* (string-downcase (symbol-name style)) title)
-		     :x-label x-label :y-label y-label :aspect-ratio aspect-ratio
-		     :output output :output-format output-format
-		     :x-logscale x-logscale :y-logscale y-logscale
-		     :x-range x-range :y-range y-range
-		     :x-range-reverse x-range-reverse :y-range-reverse y-range-reverse
-		     :key key)
-     (finish-output stream))
-    (t ;; gpファイルに出力
-     (dump-gp-file (format nil "\"~A\" using 1:2 with ~A title \"~A\""
-			   *tmp-dat-file* (string-downcase (symbol-name style)) title)
-		   :x-label x-label :y-label y-label :aspect-ratio aspect-ratio
-		   :output output :output-format output-format
-		   :x-logscale x-logscale :y-logscale y-logscale
-		   :x-range x-range :y-range y-range
-		   :x-range-reverse x-range-reverse :y-range-reverse y-range-reverse
-		   :key key)      
-     ;; gnuplotを呼び出し
-     (external-program:run *gnuplot-path* (list "-persist" *tmp-gp-file*)))))
+
+  (let ((plot-arg-string (format nil "\"~A\" using 1:2 with ~A title \"~A\""
+				 *tmp-dat-file* (string-downcase (symbol-name style)) title)))
+    (if stream
+      (progn
+	(dump-gp-stream stream
+			plot-arg-string
+			:x-label x-label :y-label y-label :aspect-ratio aspect-ratio
+			:output output :output-format output-format
+			:x-logscale x-logscale :y-logscale y-logscale
+			:x-range x-range :y-range y-range
+			:x-range-reverse x-range-reverse :y-range-reverse y-range-reverse
+			:key key)
+	(finish-output stream))
+      ;; gpファイルに出力
+      (progn
+	(dump-gp-file plot-arg-string
+		      :x-label x-label :y-label y-label :aspect-ratio aspect-ratio
+		      :output output :output-format output-format
+		      :x-logscale x-logscale :y-logscale y-logscale
+		      :x-range x-range :y-range y-range
+		      :x-range-reverse x-range-reverse :y-range-reverse y-range-reverse
+		      :key key)      
+	;; gnuplotを呼び出し
+	(external-program:run *gnuplot-path* (list "-persist" *tmp-gp-file*))))))
 
 (defun comma-separated-concatenate (string-list)
   (apply #'concatenate 'string
@@ -171,64 +172,65 @@
 ;; (plot-lists (list list1 list2) :axis-list '(x1y1 x1y2))
 ;; のようにする。それ以上の数、スケールの異なるグラフを重ねて表示する場合は、次で定義する正規化機能付きのplot-lists-with-normalizeで表示する
 ;; というか、y-listsに何か関数を噛ませればいいのか。normalize-listを定義したので、これをmapcarすればいい。
+
+;; 線ごとにスタイルを変えたいときのために、styleにlistを指定することもできるようにする
 (defun plot-lists (y-lists
 		   &key (x-lists nil) (title-list nil) (style 'lines)
-		   (x-label nil) (y-label nil)
-		   (aspect-ratio 1.0)
-		   (output nil) (output-format :png)
-		   (x-logscale nil) (y-logscale nil)
-		   (x-range nil) (y-range nil)
-		   (x-range-reverse nil) (y-range-reverse nil) (key t)
-		   (axis-list nil) ; nilにすると全部x1y1にする
-		   (stream nil))
+		     (x-label nil) (y-label nil)
+		     (aspect-ratio 1.0)
+		     (output nil) (output-format :png)
+		     (x-logscale nil) (y-logscale nil)
+		     (x-range nil) (y-range nil)
+		     (x-range-reverse nil) (y-range-reverse nil) (key t)
+		     (axis-list nil) ; nilにすると全部x1y1にする
+		     (stream nil))
   (loop for i from 0 to (1- (length y-lists)) do
-       (let ((x-list (nth i x-lists))
-	     (y-list (nth i y-lists)))
-	 (if (null x-lists) (setf x-list (loop for i from 0 to (1- (length y-list)) collect i)))
-	 ;; 長さチェック
-	 (if (not (= (length x-list) (length y-list)))
-	     (error "list length mismatch detected between y-list and x-list."))
-	 ;; datファイルに出力
-	 (with-open-file (dat-file (format nil "~A.~A" *tmp-dat-file* i)
-				   :direction :output :if-exists :supersede)
-	   (mapc #'(lambda (x y) (format dat-file "~f ~f~%" x y)) x-list y-list))))
+    (let ((x-list (nth i x-lists))
+	  (y-list (nth i y-lists)))
+      (if (null x-lists) (setf x-list (loop for i from 0 to (1- (length y-list)) collect i)))
+      ;; 長さチェック
+      (if (not (= (length x-list) (length y-list)))
+	(error "list length mismatch detected between y-list and x-list."))
+      ;; datファイルに出力
+      (with-open-file (dat-file (format nil "~A.~A" *tmp-dat-file* i)
+				:direction :output :if-exists :supersede)
+	(mapc #'(lambda (x y) (format dat-file "~f ~f~%" x y)) x-list y-list))))
 
   (if (and (not (null axis-list))
 	   (not (= (length y-lists) (length axis-list))))
-      (error "list length mismatch detected between y-lists and axis-list."))
+    (error "list length mismatch detected between y-lists and axis-list."))
+
+  (if (and (listp style) (not (= (length y-lists) (length style))))
+    (error "list length mismatch detected between y-lists and style."))
   
   ;; gpファイルに出力
-  (cond
-    (stream
-     (dump-gp-stream stream
-		     (comma-separated-concatenate
-		      (loop for i from 0 to (1- (length y-lists)) collect
-			   (format nil "\"~A.~A\" using 1:2 with ~A title \"~A\" axis ~A"
-				   *tmp-dat-file* i (string-downcase (symbol-name style))
-				   (if (null title-list) " " (nth i title-list))
-				   (if (null axis-list) "x1y1" (string-downcase (symbol-name (nth i axis-list)))))))
-		     :x-label x-label :y-label y-label :aspect-ratio aspect-ratio
-		     :output output :output-format output-format
-		     :x-logscale x-logscale :y-logscale y-logscale
-		     :x-range x-range :y-range y-range
-		     :x-range-reverse x-range-reverse :y-range-reverse y-range-reverse
-		     :key key)
-     (finish-output stream))
-    (t
-     (dump-gp-file (comma-separated-concatenate
-		    (loop for i from 0 to (1- (length y-lists)) collect
-			 (format nil "\"~A.~A\" using 1:2 with ~A title \"~A\" axis ~A"
-				 *tmp-dat-file* i (string-downcase (symbol-name style))
-				 (if (null title-list) " " (nth i title-list))
-				 (if (null axis-list) "x1y1" (string-downcase (symbol-name (nth i axis-list)))))))
-		   :x-label x-label :y-label y-label :aspect-ratio aspect-ratio
-		   :output output :output-format output-format
-		   :x-logscale x-logscale :y-logscale y-logscale
-		   :x-range x-range :y-range y-range
-		   :x-range-reverse x-range-reverse :y-range-reverse y-range-reverse
-		   :key key)
-     ;; gnuplotを呼び出し
-     (external-program:run *gnuplot-path* (list "-persist" *tmp-gp-file*)))))
+  (let ((plot-arg-string (comma-separated-concatenate
+			  (loop for i from 0 to (1- (length y-lists)) collect
+			    (format nil "\"~A.~A\" using 1:2 with ~A title \"~A\" axis ~A"
+				    *tmp-dat-file* i (if (symbolp style)
+						       (string-downcase (symbol-name style))
+						       (string-downcase (symbol-name (nth i style))))
+						     (if (null title-list) " " (nth i title-list))
+						     (if (null axis-list) "x1y1" (string-downcase (symbol-name (nth i axis-list)))))))))
+    (if stream
+      (progn (dump-gp-stream stream
+			     plot-arg-string
+			     :x-label x-label :y-label y-label :aspect-ratio aspect-ratio
+			     :output output :output-format output-format
+			     :x-logscale x-logscale :y-logscale y-logscale
+			     :x-range x-range :y-range y-range
+			     :x-range-reverse x-range-reverse :y-range-reverse y-range-reverse
+			     :key key)
+	     (finish-output stream))
+      (progn (dump-gp-file plot-arg-string
+			   :x-label x-label :y-label y-label :aspect-ratio aspect-ratio
+			   :output output :output-format output-format
+			   :x-logscale x-logscale :y-logscale y-logscale
+			   :x-range x-range :y-range y-range
+			   :x-range-reverse x-range-reverse :y-range-reverse y-range-reverse
+			   :key key)
+	     ;; gnuplotを呼び出し
+	     (external-program:run *gnuplot-path* (list "-persist" *tmp-gp-file*))))))
 
 ;;; listを[0,1]の範囲に正規化する
 (defun normalize-list (list)
@@ -543,7 +545,6 @@
     ;; プロット用コマンド
     (format gp-file (concatenate 'string "splot " plot-arg-format))))
 
-
 (defun splot-list (z-func x-list y-list
 		   &key (title " ") (style 'lines)
 		   (x-label nil) (y-label nil) (z-label nil)
@@ -556,17 +557,17 @@
 		   (map nil))
   ;; 長さチェック
   (if (not (= (length x-list) (length y-list)))
-      (error "list length mismatch detected between y-list and x-list."))
+    (error "list length mismatch detected between y-list and x-list."))
+  
   ;; datファイルに出力
   (with-open-file (dat-file *tmp-dat-file* :direction :output :if-exists :supersede)
-    (mapc #'(lambda (x)
-	      (mapc #'(lambda (y)
-			(format dat-file "~f ~f ~f~%"
-				x y (funcall z-func x y)))
-		    y-list)
-	      (format dat-file "~%")) ; xの値が変わるごとに改行を入れることでグリッドデータとして認識される
-	  x-list))
-
+      (mapc #'(lambda (x)
+		(mapc #'(lambda (y)
+			  (format dat-file "~f ~f ~f~%" x y (funcall z-func x y)))
+		      y-list)
+		(format dat-file "~%")) ; xの値が変わるごとに改行を入れることでグリッドデータとして認識される
+	    x-list))
+    
   ;; gpファイルに出力
   (dump-gp-file-3d
    (if map
@@ -589,3 +590,28 @@
    :key key :map map)
   ;; gnuplotを呼び出し
   (external-program:run *gnuplot-path* (list "-persist" *tmp-gp-file*)))
+
+(defun splot-matrix (matrix &key (title " ") (style 'lines)
+			      (x-label nil) (y-label nil) (z-label nil)
+			      (output nil) (output-format :png)
+			      (x-range-reverse nil) (y-range-reverse nil) (z-range-reverse nil)
+			      (key t))
+  (flet ((seq-row (start end)
+	   (nlet iter ((i start) (product nil))
+	     (if (> i end)
+	       (reverse product)
+	       (iter (1+ i) (cons (+ i 0.999) (cons (+ i 0.999) (cons i (cons i product))))))))
+	 (seq-col (start end)
+	   (nlet iter ((i start) (product nil))
+	     (if (> i end)
+	       (reverse product)
+	       (iter (1+ i) (cons (+ i 0.999) (cons i (cons (+ i 0.999) (cons i product)))))))))
+    (splot-list (lambda (x y)
+		  (aref matrix (truncate x) (truncate y)))
+		(seq-row 0 (1- (array-dimension matrix 0)))
+		(seq-col 0 (1- (array-dimension matrix 0)))	      
+		:title title :style style
+		:x-label x-label :y-label y-label :z-label z-label
+		:output output :output-format output-format
+		:x-range-reverse x-range-reverse :y-range-reverse y-range-reverse :z-range-reverse z-range-reverse
+		:aspect-ratio 1.0 :map t :key key)))

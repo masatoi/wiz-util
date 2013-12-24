@@ -1,7 +1,7 @@
 ;;; -*- Coding: utf-8; Mode: Lisp; Syntax: Common-Lisp; -*-
 
 (defpackage :wiz-util
-  (:use :common-lisp :alexandria)
+  (:use :common-lisp :alexandria :anaphora)
   (:nicknames :wiz)
   (:export :nlet :mlet :while
 	   :sfor :n-times :saccumulate :ssum :saverage :sprod :summation :product
@@ -12,6 +12,7 @@
 	   :n-times-collect :square :sgn :multiple?
 	   :index-list->scalar-index :scalar-index->index-list
 	   :binary-list->scalar :radix-num-list->scalar
+	   :bit-vector->integer :integer->bit-vector
 	   :random-from-probability-list :d :doc :with-open-multiple-file :nthcar :assoc-ref
 	   ;; ring-buffer functions
 	   :make-ring-buffer :ring-buffer-size :ring-buffer-buffer
@@ -29,6 +30,7 @@
 	   :multiplot
 	   :with-plot-stream
 	   :splot-list
+	   :splot-matrix
 	   ;; for queue
 	   :make-q :q-elements :q-key :q-last :q-p
 	   :make-empty-queue :enqueue :dequeue :empty-queue?
@@ -43,6 +45,9 @@
 	   
 	   ;; OOP utilities
 	   :defclass$
+
+	   ;; for multiprocessing
+	   :pmapcar :pmapcar*
 
 	   ;;; for numerical ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	   :matrixp :num-rows :num-cols :square-matrix? :make-matrix
@@ -60,12 +65,12 @@
 
 	   ;; onlisp functions
 	   :last1 :single :append1 :conc1 :mklist :longer :filter :group
-	   ; :flatten ; conflict with ALEXANDRIA
+	   :flatten ; conflict with ALEXANDRIA
 	   :prune :find2 :before :after :duplicate :split-if :most :best :mostn
 	   :map0-n :map1-n :mapa-b :map->
-	   ; :mappend ; conflict with ALEXANDRIA
+	   :mappend ; conflict with ALEXANDRIA
 	   :mvdo-gen
-	   ; :shuffle ; conflict with ALEXANDRIA
+	   :shuffle ; conflict with ALEXANDRIA
 	   :mapcars
 	   :rmapcar
 	   :readlist
@@ -78,7 +83,7 @@
 	   :!
 	   :def!
 	   :memoize
-	   ; :compose ; conflict with ALEXANDRIA
+	   :compose ; conflict with ALEXANDRIA
 	   :fif
 	   :fint
 	   :fun
@@ -95,7 +100,7 @@
 	   :mac
 	   :when-bind
 	   :when-bind*
-	   ; :with-gensyms ; conflict with ALEXANDRIA
+	   :with-gensyms ; conflict with ALEXANDRIA
 	   :condlet
 	   :if3
 	   :nif
@@ -119,8 +124,11 @@
 	   :diff-list
 
 	   ;; アナフォラもexportしないと不便
-	   :aif
 	   :it
-	   :alambda
-	   :self
+	   :aif
+	   :acond
+	   ;; :alambda
+	   ;; :self
+
+	   :map-tree
 	   ))
