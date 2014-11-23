@@ -2,7 +2,7 @@
 
 (defsystem "wiz-util"
     :description "wiz-util: utility collections for my daily work."
-    :version "0.5"
+    :version "0.6"
     :author "Satoshi Imai <satoshi.imai@gmail.com>"
     :licence "Public Domain"
     :depends-on (:external-program
