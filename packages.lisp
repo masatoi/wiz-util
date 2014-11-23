@@ -1,7 +1,7 @@
 ;;; -*- Coding: utf-8; Mode: Lisp; Syntax: Common-Lisp; -*-
 
 (defpackage :wiz-util
-  (:use :common-lisp :alexandria :anaphora)
+  (:use :common-lisp :alexandria :anaphora) ;:named-readtables
   (:nicknames :wiz)
   (:export :nlet :mlet :while
 	   :sfor :n-times :saccumulate :ssum :saverage :sprod :summation :product
@@ -18,7 +18,7 @@
 	   :make-ring-buffer :ring-buffer-size :ring-buffer-buffer
 	   :ring-buffer-sum :ring-buffer-average
 	   :ring-buffer-tail :rb-latest-elem :rb-push!
-	   :rb-standard-deviation :rb-standard-deviation-fast
+	   :rb-variance :rb-standard-deviation
 	   :rb-get-sequence :rb-get-difference-sequence
 	   :rb-top-elem :rb-tail-elem :rb-min/max
 	   ;; list smoother
@@ -47,7 +47,8 @@
 	   :defclass$
 
 	   ;; for multiprocessing
-	   :pmapcar :pmapcar*
+	   #+sbcl :pmapcar
+	   #+sbcl :pmapcar*
 
 	   ;;; for numerical ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	   :matrixp :num-rows :num-cols :square-matrix? :make-matrix
@@ -122,6 +123,7 @@
 	   :toggle
 
 	   :diff-list
+	   :log-diff-list
 
 	   ;; アナフォラもexportしないと不便
 	   :it
@@ -131,4 +133,10 @@
 	   ;; :self
 
 	   :map-tree
+	   :methods-of
+
+	   :hash-printall
+	   :catstr
+	   :catstr-list
+	   :map-plist
 	   ))

@@ -4,39 +4,39 @@
 
 ;;; nlet ; named-let ; 名前付きlet
 ;;  Schemeのnamed-letと同じ、繰り返し構造の簡易表現
-;; (defmacro nlet (tag var-vals &body body)
-;;   `(labels ((,tag ,(mapcar #'car var-vals) ,@body))
-;;      (declare (optimize (speed 3))) ; for tail recursion optimization
-;;      (,tag ,@(mapcar #'cadr var-vals))))
+(defmacro nlet (tag var-vals &body body)
+  `(labels ((,tag ,(mapcar #'car var-vals) ,@body))
+     (declare (optimize (speed 3))) ; for tail recursion optimization
+     (,tag ,@(mapcar #'cadr var-vals))))
 
 ;; 従来型のnletは実は末尾再帰呼出しじゃなくても使えるが、これは厳密に末尾再帰呼出しである必要がある
-(defmacro! nlet (tag letargs &rest body)
-  (let ((gs (loop for i in letargs
-		 collect (gensym))))
-    `(macrolet
-	 ((,tag ,gs
-	    `(progn
-	       (psetq
-		,@(apply #'nconc
-			 (mapcar
-			  #'list
-			  ',(mapcar #'car letargs)
-			  (list ,@gs))))
-	       (go ,',g!n))))
-       (block ,g!b
-	 (let ,letargs
-	   (tagbody
-	      ,g!n (return-from
-		    ,g!b (progn ,@body))))))))
+;; (defmacro! nlet (tag letargs &rest body)
+;;   (let ((gs (loop for i in letargs
+;; 		 collect (gensym))))
+;;     `(macrolet
+;; 	 ((,tag ,gs
+;; 	    `(progn
+;; 	       (psetq
+;; 		,@(apply #'nconc
+;; 			 (mapcar
+;; 			  #'list
+;; 			  ',(mapcar #'car letargs)
+;; 			  (list ,@gs))))
+;; 	       (go ,',g!n))))
+;;        (block ,g!b
+;; 	 (let ,letargs
+;; 	   (tagbody
+;; 	      ,g!n (return-from
+;; 		    ,g!b (progn ,@body))))))))
 
 ;;; mlet ; 多重let
 ;; destructuring-bind とほぼ同じ
 (defmacro mlet (symbols value-list &body body)
   "Evaluate the body with binding each value of value-list to the symbols.
 Examples: 
-(mlet (a b c) '(1 2 3)
-  (list a b c))
-=> (1 2 3)"
+ (mlet (a b c) '(1 2 3)
+   (list a b c))
+ => (1 2 3)"
   `(apply (lambda ,symbols ,@body) ,value-list))
 
 ;;; while 驚くべきことに標準では入っていない.
@@ -161,6 +161,19 @@ Examples:
 	   (tak (1- y) z x)
 	   (tak (1- z) x y))))
 
+;;; describeのラッパー
+(defun d (object)
+  "wrapper of describe."
+  (describe object))
+
+;;; documentationのラッパー
+(defun doc (name-symbol)
+  "simplified documentation function."
+  (aif (documentation name-symbol 'function)
+       (format t "~A~%" it))
+  (aif (documentation name-symbol 'variable)
+       (format t "~A~%" it)))
+
 ;;; デバッグ用reader macro
 ;;; 式の前に「@」をつけるとdebug-printが適用される.
 ;;; 例 @(+ 1 2)
@@ -168,21 +181,45 @@ Examples:
     (format t "~A => ~A~%" pre-exp exp)
     exp)
 
-;; (set-macro-character
-;;  #\?
-;;  #'(lambda (stream char)
-;;      char ;for avoid Style-Warning
-;;      (let ((read-data (read stream t nil t)))
-;;        `(debug-print (quote ,read-data) ,read-data))))
+(set-macro-character
+ #\FULLWIDTH_QUESTION_MARK
+ #'(lambda (stream char)
+     (declare (ignore char))
+     (let ((read-data (read stream t nil t)))
+       `(debug-print (quote ,read-data) ,read-data))))
+
+(defun describe-print (symbol)
+  (let ((var-description
+	 (if (boundp symbol)
+	   (with-output-to-string (s)
+	     (format s "=== Variable description ==========~%")
+	     (describe symbol s))))
+	(func-description
+	 (if (fboundp symbol)	   
+	   (with-output-to-string (s)
+	     (format s "=== Function description ==========~%")
+	     (describe symbol s)))))
+    (if (or var-description func-description)
+      (let ((str (concatenate 'string var-description func-description)))
+	(format t str)
+	str)
+      "Not found")))
+
+(set-macro-character
+ #\REFERENCE_MARK
+ #'(lambda (stream char)
+     (declare (ignore char))
+     (let ((read-data (read stream t nil t)))
+       `(describe-print (quote ,read-data)))))
 
 ;;; @は他のライブラリでマクロ文字として多用されるため、Gaucheのデバックプリント風の2ストローク表記に
-;;(make-dispatch-macro-character #\?)
+;; (make-dispatch-macro-character #\REFERENCE_MARK)
 
-(set-dispatch-macro-character #\# #\=
-   #'(lambda (stream char1 char2)
-       (declare (ignore char1 char2))
-       (let ((read-data (read stream t nil t)))
-	 `(debug-print (quote ,read-data) ,read-data))))
+;; (set-dispatch-macro-character #\REFERENCE_MARK #\=
+;;    #'(lambda (stream char1 char2)
+;;        (declare (ignore char1 char2))
+;;        (let ((read-data (read stream t nil t)))
+;; 	 `(debug-print (quote ,read-data) ,read-data))))
 
 ;;; デリミタリードマクロ
 ;;; 例. #[2 7] => (2 3 4 5 6 7)
@@ -313,8 +350,13 @@ Examples:
 			    (cons (progn ,@body) product))))))
      (rec ,n 1 ())))
 
-(defun square (x)
-  (* x x))
+(defmacro square (x)
+  (let ((val (gensym)))
+    `(let ((,val ,x))
+       (* ,val ,val))))
+
+;; (defun square (x)
+;;   (* x x))
 
 (defun sgn (x)
   (if (>= x 0) 1 -1))
@@ -392,19 +434,6 @@ Examples:
                    (t accum))))
     (coerce (integer->bit-list integer) 'bit-vector)))
 
-;;; describeのラッパー
-(defun d (object)
-  "wrapper of describe."
-  (describe object))
-
-;;; documentationのラッパー
-(defun doc (name-symbol)
-  "simplified documentation function."
-  (aif (documentation name-symbol 'function)
-       (format t "~A~%" it))
-  (aif (documentation name-symbol 'variable)
-       (format t "~A~%" it)))
-
 ;;; 複数のファイルストリームを開いて何かするマクロ
 ;; ; before
 ;; (with-open-multiple-file ((f1 "/hoge/fuga" :direction :input)
@@ -470,43 +499,19 @@ Examples:
              (setf (ring-buffer-tail ring-buffer) pop-datum-position)
              pop-datum)))))
 
-;; (defstruct ring-buffer
-;;   (size 0)
-;;   (buffer nil)
-;;   (sum 0d0)
-;;   (tail 0))
-
-;; (defun ring-buffer-average (ring-buffer)
-;;   (/ (ring-buffer-sum ring-buffer)
-;;      (ring-buffer-size ring-buffer)))
-
 (defun rb-latest-elem (ring-buffer)
   (let ((buff (ring-buffer-buffer ring-buffer))
 	(tail (ring-buffer-tail ring-buffer)))
     (if buff (aref buff tail))))
 
-;; ;; リングバッファにデータをプッシュし、最も古いデータがポップされ、返される(バッファのサイズは一定)
-;; ;; 2乗の平均から平均の2乗を引くことで分散が求められる
-;; (defun rb-push! (ring-buffer datum)
-;;   (let ((size (ring-buffer-size ring-buffer)))
-;;     (cond ((zerop size)
-;; 	   (error "ring-buffer size must be set initially."))
-;; 	  ;; bufferが空のとき
-;; 	  ((null (ring-buffer-buffer ring-buffer))
-;; 	   (setf (ring-buffer-buffer ring-buffer)
-;; 		 (make-array size :initial-element datum))	   
-;; 	   (setf (ring-buffer-sum ring-buffer) (* datum (ring-buffer-size ring-buffer)))
-;; 	   (setf (ring-buffer-tail ring-buffer) (1- size))
-;; 	   datum)
-;; 	  ;; bufferに何か入っているとき
-;; 	  (t
-;; 	   (let* ((pop-datum-position (mod (1+ (ring-buffer-tail ring-buffer)) size))
-;; 		  (pop-datum (svref (ring-buffer-buffer ring-buffer) pop-datum-position)))
-;; 	     (setf (svref (ring-buffer-buffer ring-buffer) pop-datum-position) datum) ; push
-;; 	     (setf (ring-buffer-sum ring-buffer)
-;; 		   (+ (ring-buffer-sum ring-buffer) datum (- pop-datum)))
-;; 	     (setf (ring-buffer-tail ring-buffer) pop-datum-position)
-;; 	     pop-datum)))))
+;; 不偏分散
+(defun rb-variance (ring-buffer)
+  (let ((ave (ring-buffer-average ring-buffer))
+	(buff (ring-buffer-buffer ring-buffer))
+	(size (ring-buffer-size ring-buffer)))
+    (/ (loop for i from 0 to (1- size)
+		summing (square (- ave (aref buff i))))
+	     (1- size))))
 
 ;; 不偏分散の平方根
 (defun rb-standard-deviation (ring-buffer)
@@ -655,6 +660,35 @@ Examples:
 	  (nreverse product)
 	  (iter cdr-lst (cons (- (car cdr-lst) (car lst)) product))))))
 
+;;; リストから対数差分系列を作って返す関数
+(defun log-diff-list (lst)
+  (nlet iter ((lst lst)
+	      (product nil))
+    (let ((cdr-lst (cdr lst)))
+      (if (null cdr-lst)
+	(nreverse product)
+	(iter cdr-lst (cons (- (log (car cdr-lst)) (log (car lst))) product))))))
+
+;;; リングバッファを使って系列から平均、分散の系列を作る
+(defun mean-variance-list (lst size-of-ring-buffer)
+  (let ((rb (make-ring-buffer :size size-of-ring-buffer)))
+    (nlet iter
+	((lst lst)
+	 (mean-list nil)
+	 (var-list nil))
+      (if (null lst)
+	(values (nreverse mean-list)
+		(nreverse var-list))
+	(progn
+	  (rb-push! rb (car lst))
+	  (iter (cdr lst)
+		(cons (ring-buffer-average rb) mean-list)
+		(cons (rb-variance rb) var-list)))))))
+    
+
+
+
+    
 (defun multiple? (n m)
   "Return whether n is a multiple of m.
 Examples:
@@ -663,6 +697,7 @@ Examples:
   (zerop (mod n m)))
 
 ;;; cl-muprocによる並列化版のmapcar。pmapcar*は返値のリストが終わった順になる。
+#+sbcl
 (defun pmapcar (fn lis &key (timeout-sec 100))
   (labels ((gather (lis)
              (if (null lis) nil
@@ -683,6 +718,7 @@ Examples:
                        key))
                  lis))))))
 
+#+sbcl
 (defun pmapcar* (fn lis  &key (timeout-sec 100))
   (labels ((gather (n lis)
              (if (zerop n) lis
@@ -707,3 +743,48 @@ Examples:
 	((atom tree) (funcall fn tree))
 	(t (cons (map-tree fn (car tree))
 		 (map-tree fn (cdr tree))))))
+
+(defun methods-of (object)
+  (moptilities::specializer-direct-methods (class-of object)))
+
+;; ハッシュテーブルのキーと値を全て表示する
+(defun hash-printall (hashtable &optional (stream *standard-output*))
+  (maphash #'(lambda (key value)
+	       (format stream "key: ")
+	       (write key :stream stream)
+	       (format stream " , value: ")
+	       (write value :stream stream)
+	       (format stream "~%"))
+	   hashtable))
+
+;; 色々なオブジェクトのリストを文字列に連結する
+(defun catstr (&rest obj-list)
+  "Example:
+ (catstr 'foo 'bar) => \"FOOBAR\"
+ (catstr \"foo\" \"bar\") => \"foobar\""
+  (reduce (lambda (s1 s2)
+	    (concatenate 'string (format nil "~A" s1) (format nil "~A" s2)))
+	  obj-list))
+
+(defun catstr-list  (obj-list)
+  "Example:
+ (catstr-list '(foo bar)) => \"FOOBAR\"
+ (catstr-list '(\"foo\" \"bar\")) => \"foobar\""
+  (reduce (lambda (s1 s2)
+	    (concatenate 'string (format nil "~A" s1) (format nil "~A" s2)))
+	  obj-list))
+
+(defun map-plist (func plist &optional product)
+  "Example:
+ (map-plist (lambda (key val)
+ 	     (format t \"Key: ~A, Value: ~A~%\" key val)
+ 	     val)
+ 	   '(:fookey fooval :barkey barval))
+ Key: FOOKEY, Value: FOOVAL
+ Key: BARKEY, Value: BARVAL
+ => (FOOVAL BARVAL)"
+  (assert (evenp (length plist)))
+  (if (null plist)
+    (nreverse product)
+    (map-plist func (cddr plist)
+	       (cons (funcall func (car plist) (cadr plist)) product))))
