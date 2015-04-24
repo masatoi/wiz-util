@@ -1,9 +1,16 @@
-;;; -*- Coding: utf-8; Mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- Coding: utf-8; Mode: Lisp; -*-
 
 (defpackage :wiz-util
   (:use :common-lisp :alexandria :anaphora) ;:named-readtables
+  (:import-from :metabang-bind :bind)
+  ;; (:import-from :lparallel
+  ;; 		:pcount :pcount-if :pcount-if-not
+  ;; 		:pfind :pfind-if :pfind-if-not
+  ;; 		:pmap :pmapcar :pmapc :preduce :psort
+  ;; 		:premove :premove-if :premove-if-not
+  ;; 		:pdotimes)
   (:nicknames :wiz)
-  (:export :nlet :mlet :while
+  (:export :^ :nlet :mlet :while :bind
 	   :sfor :n-times :saccumulate :ssum :saverage :sprod :summation :product
 	   :existp :split :split-equally
 	   :exclusive-or :pow :tak :debug-print :make-number-list
@@ -46,9 +53,12 @@
 	   ;; OOP utilities
 	   :defclass$
 
-	   ;; for multiprocessing
-	   #+sbcl :pmapcar
-	   #+sbcl :pmapcar*
+	   ;; ;; for multiprocessing
+	   ;; :pcount :pcount-if :pcount-if-not
+	   ;; :pfind :pfind-if :pfind-if-not
+	   ;; :pmap :pmapcar :pmapc :preduce :psort
+	   ;; :premove :premove-if :premove-if-not
+	   ;; :pdotimes
 
 	   ;;; for numerical ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	   :matrixp :num-rows :num-cols :square-matrix? :make-matrix

@@ -1,6 +1,15 @@
-;;; -*- Coding: utf-8; Mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- Coding: utf-8; Mode: Lisp; -*-
 
 (in-package :wiz-util)
+
+;; ;; settings for multiprocessing
+;; (defparameter lparallel:*kernel* (lparallel:make-kernel 20))
+
+;;; lambdaの短縮表記 
+;;  http://qiita.com/AlgoSystem/items/eb45113b173fd99d5605
+;;  組合せ式の最初の位置では使えないので完全なlambdaの置き換えにはリードマクロが必要だが、通常利用ではこれで十分
+(defmacro ^ ((&rest parameter) &body body)
+  `(lambda ,parameter ,@body))
 
 ;;; nlet ; named-let ; 名前付きlet
 ;;  Schemeのnamed-letと同じ、繰り返し構造の簡易表現
@@ -175,14 +184,14 @@ Examples:
        (format t "~A~%" it)))
 
 ;;; デバッグ用reader macro
-;;; 式の前に「@」をつけるとdebug-printが適用される.
-;;; 例 @(+ 1 2)
+;;; 式の前に「≫」をつけるとdebug-printが適用される.
+;;; 例 ≫(+ 1 2)
 (defun debug-print (pre-exp exp)
     (format t "~A => ~A~%" pre-exp exp)
     exp)
 
 (set-macro-character
- #\FULLWIDTH_QUESTION_MARK
+ #\MUCH_GREATER-THAN
  #'(lambda (stream char)
      (declare (ignore char))
      (let ((read-data (read stream t nil t)))
@@ -696,47 +705,48 @@ Examples:
   (multiple? 11 3) => nil"
   (zerop (mod n m)))
 
-;;; cl-muprocによる並列化版のmapcar。pmapcar*は返値のリストが終わった順になる。
-#+sbcl
-(defun pmapcar (fn lis &key (timeout-sec 100))
-  (labels ((gather (lis)
-             (if (null lis) nil
-	       (muproc:mumsg-receive (from)
-		 ((value key) (eq key (car lis))
-		  (cons value (gather (cdr lis))))))))
-    (muproc:muprocn (timeout-sec)
-      (muproc:muproc-with-registered-port (:self)
-        (gather
-         (mapcar #'(lambda (i)
-                     (let ((key (gensym)))
-                       (muproc:muproc-spawn
-                        key
-                        #'(lambda ()
-                            (muproc:mumsg-send :self :value (funcall fn i) :key key))
-                        ()
-                        :errorstream *trace-output*)
-                       key))
-                 lis))))))
+;;; DONE: lparallelに置き換え
+;; ;;; cl-muprocによる並列化版のmapcar。pmapcar*は返値のリストが終わった順になる。
+;; #+sbcl
+;; (defun pmapcar (fn lis &key (timeout-sec 100))
+;;   (labels ((gather (lis)
+;;              (if (null lis) nil
+;; 	       (muproc:mumsg-receive (from)
+;; 		 ((value key) (eq key (car lis))
+;; 		  (cons value (gather (cdr lis))))))))
+;;     (muproc:muprocn (timeout-sec)
+;;       (muproc:muproc-with-registered-port (:self)
+;;         (gather
+;;          (mapcar #'(lambda (i)
+;;                      (let ((key (gensym)))
+;;                        (muproc:muproc-spawn
+;;                         key
+;;                         #'(lambda ()
+;;                             (muproc:mumsg-send :self :value (funcall fn i) :key key))
+;;                         ()
+;;                         :errorstream *trace-output*)
+;;                        key))
+;;                  lis))))))
 
-#+sbcl
-(defun pmapcar* (fn lis  &key (timeout-sec 100))
-  (labels ((gather (n lis)
-             (if (zerop n) lis
-                 (muproc:mumsg-receive (from)
-                   ((value) t
-                    (gather (1- n) (cons value lis)))))))
-    (muproc:muprocn (timeout-sec)
-      (muproc:muproc-with-registered-port (:self)
-        (gather
-         (reduce #'(lambda (count i)
-                     (muproc:muproc-spawn
-                      (gensym)
-                      #'(lambda ()
-                          (muproc:mumsg-send :self :value (funcall fn i)))
-                      () :errorstream *trace-output*)
-                     (1+ count))
-                 lis :initial-value 0)
-         nil)))))
+;; #+sbcl
+;; (defun pmapcar* (fn lis  &key (timeout-sec 100))
+;;   (labels ((gather (n lis)
+;;              (if (zerop n) lis
+;;                  (muproc:mumsg-receive (from)
+;;                    ((value) t
+;;                     (gather (1- n) (cons value lis)))))))
+;;     (muproc:muprocn (timeout-sec)
+;;       (muproc:muproc-with-registered-port (:self)
+;;         (gather
+;;          (reduce #'(lambda (count i)
+;;                      (muproc:muproc-spawn
+;;                       (gensym)
+;;                       #'(lambda ()
+;;                           (muproc:mumsg-send :self :value (funcall fn i)))
+;;                       () :errorstream *trace-output*)
+;;                      (1+ count))
+;;                  lis :initial-value 0)
+;;          nil)))))
 
 (defun map-tree (fn tree)
   (cond ((null tree) nil)
@@ -766,7 +776,7 @@ Examples:
 	    (concatenate 'string (format nil "~A" s1) (format nil "~A" s2)))
 	  obj-list))
 
-(defun catstr-list  (obj-list)
+(defun catstr-list (obj-list)
   "Example:
  (catstr-list '(foo bar)) => \"FOOBAR\"
  (catstr-list '(\"foo\" \"bar\")) => \"foobar\""

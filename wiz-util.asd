@@ -1,4 +1,4 @@
-;;; -*- Coding: utf-8; Mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- Coding: utf-8; Mode: Lisp; -*-
 
 (defsystem "wiz-util"
     :description "wiz-util: utility collections for my daily work."
@@ -8,11 +8,12 @@
     :depends-on (:external-program
 		 :alexandria
 		 :cl-fad
-		 #+sbcl :cl-muproc
+		 ;; :lparallel
 		 :anaphora
 		 :metatilities
 		 :moptilities
-		 ;:named-readtables
+		 :metabang-bind
+		 ;; :named-readtables
 		 )
 
     :components ((:file "packages")
