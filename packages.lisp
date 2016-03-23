@@ -10,9 +10,9 @@
   ;; 		:premove :premove-if :premove-if-not
   ;; 		:pdotimes)
   (:nicknames :wiz)
-  (:export :^ :nlet :mlet :while :bind
+  (:export :^ :nlet :mlet :while :until :bind
 	   :sfor :n-times :saccumulate :ssum :saverage :sprod :summation :product
-	   :existp :split :split-equally
+	   :existp :split :split-equally :shuffle-vector
 	   :exclusive-or :pow :tak :debug-print :make-number-list
 	   :min-position :max-position :general-max/min :grouping :remove-nth
 	   :position-if-list :format-list :direct-product
@@ -20,7 +20,7 @@
 	   :index-list->scalar-index :scalar-index->index-list
 	   :binary-list->scalar :radix-num-list->scalar
 	   :bit-vector->integer :integer->bit-vector
-	   :random-from-probability-list :d :doc :with-open-multiple-file :nthcar :assoc-ref
+	   :random-from-probability-list :d :doc :with-open-multiple-file :nthcar :nthcdr :assoc-ref
 	   ;; ring-buffer functions
 	   :make-ring-buffer :ring-buffer-size :ring-buffer-buffer
 	   :ring-buffer-sum :ring-buffer-average

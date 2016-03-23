@@ -54,6 +54,11 @@ Examples:
     ((not ,test))
     ,@body))
 
+(defmacro until (test &rest body)
+  `(do ()
+    (,test)
+    ,@body))
+
 ;;; dolist-with-counter 
 (defmacro dolist-with-counter ((list-elem-var counter-var list) &body body)
   `(let ((,counter-var 0))
@@ -148,6 +153,15 @@ Examples:
       (if (< (length lst) m)
 	  (nreverse (cons (append (car product) lst) (cdr product)))
 	  (iter (nthcdr m lst) (cons (nthcar m lst) product))))))
+
+;; ベクタをシャッフルする
+(defun shuffle-vector (vec)
+  (loop for i from (1- (length vec)) downto 1 do
+    (let* ((j (random (1+ i)))
+	   (tmp (svref vec i)))
+      (setf (svref vec i) (svref vec j))
+      (setf (svref vec j) tmp)))
+  vec)
 
 ;;; 排他的論理和
 (defmacro exclusive-or (a b)
@@ -633,7 +647,7 @@ Examples:
 		       (slot-initval (if (listp slot) (cadr slot) nil)))
 		  (list slot-symbol
 			:accessor (intern (concatenate 'string slot-name "-OF"))
-			:initarg (intern slot-name :KEYWORD)
+			:initarg (intern slot-name :keyword)
 			:initform slot-initval)))
 	      body)))
 
