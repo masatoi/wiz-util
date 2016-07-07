@@ -31,13 +31,6 @@
 	   ;; list smoother
 	   :smoothing-list :smoothing-list-roughly
 	   :random-uniform :random-normal :seq :andf :orf
-	   ;; for output to gnuplot
-	   :plot-list :plot-lists :plot-histogram :plot-histogram-with-pdf
-	   :normalize-list
-	   :multiplot
-	   :with-plot-stream
-	   :splot-list
-	   :splot-matrix
 	   ;; for queue
 	   :make-q :q-elements :q-key :q-last :q-p
 	   :make-empty-queue :enqueue :dequeue :empty-queue?
@@ -149,4 +142,6 @@
 	   :catstr
 	   :catstr-list
 	   :map-plist
+
+           :find-all-gfs
 	   ))

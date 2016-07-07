@@ -812,3 +812,12 @@ Examples:
     (nreverse product)
     (map-plist func (cddr plist)
 	       (cons (funcall func (car plist) (cadr plist)) product))))
+
+
+;; クラス名からそのクラスに定義されているメソッドを列挙する
+#+sbcl
+(defun find-all-gfs (class-name)
+  (remove-duplicates
+   (mapcan (lambda (class)
+             (copy-list (sb-mop:specializer-direct-generic-functions class)))
+           (sb-mop:compute-class-precedence-list (find-class class-name)))))

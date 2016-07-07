@@ -5,8 +5,7 @@
     :version "0.6"
     :author "Satoshi Imai <satoshi.imai@gmail.com>"
     :licence "Public Domain"
-    :depends-on (:external-program
-		 :alexandria
+    :depends-on (:alexandria
 		 :cl-fad
 		 ;; :lparallel
 		 :anaphora
@@ -14,6 +13,7 @@
 		 :moptilities
 		 :metabang-bind
 		 ;; :named-readtables
+                 :iterate
 		 )
 
     :components ((:file "packages")
@@ -23,7 +23,6 @@
 		 (:file "wiz-util" :depends-on ("packages" "lol-for-nlet"))
 		 (:file "memoize" :depends-on ("packages"))
 		 ;;(:file "lol" :depends-on ("packages"))
-		 (:file "plot" :depends-on ("packages" "wiz-util"))
 		 (:file "queue" :depends-on ("packages"))
 		 (:file "matrix" :depends-on ("packages" "wiz-util"))
 		 (:file "multivariate-gaussian" :depends-on ("packages" "matrix"))))
