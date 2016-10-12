@@ -2,7 +2,7 @@
 
 (defsystem "wiz-util"
     :description "wiz-util: utility collections for my daily work."
-    :version "0.6"
+    :version "0.7"
     :author "Satoshi Imai <satoshi.imai@gmail.com>"
     :licence "Public Domain"
     :depends-on (:alexandria
@@ -14,6 +14,8 @@
 		 :metabang-bind
 		 ;; :named-readtables
                  :iterate
+                 :uiop
+                 :cl-ppcre
 		 )
 
     :components ((:file "packages")
@@ -24,5 +26,6 @@
 		 (:file "memoize" :depends-on ("packages"))
 		 ;;(:file "lol" :depends-on ("packages"))
 		 (:file "queue" :depends-on ("packages"))
+                 (:file "scripting" :depends-on ("packages" "wiz-util"))
 		 (:file "matrix" :depends-on ("packages" "wiz-util"))
 		 (:file "multivariate-gaussian" :depends-on ("packages" "matrix"))))
