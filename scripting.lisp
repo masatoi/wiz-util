@@ -28,7 +28,9 @@
 (defun cd (dir)
   (let ((result (uiop:chdir dir)))
     (if (zerop result)
-      (pwd)
+      (let ((newdir (pwd)))
+        (setf *default-pathname-defaults* newdir)
+        newdir)
       nil)))
 
 (defun rm (p)
