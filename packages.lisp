@@ -144,4 +144,8 @@
 	   :map-plist
 
            :find-all-gfs
+
+           ;;; Scripting
+           :cat :format-directory :format-filename :format-pathname
+           :pwd :ls :cd :rm :cp :mv :exec
 	   ))
