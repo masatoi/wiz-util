@@ -1,4 +1,4 @@
-;;; -*- Coding: utf-8; Mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- Coding: utf-8; Mode: Lisp; -*-
 
 ;; wiz-utilに組込む
 (in-package :wiz-util)

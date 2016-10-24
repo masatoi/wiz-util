@@ -1,4 +1,4 @@
-;;;-*-Coding:utf-8; Mode:LISP; Package: MATRIX; Base:10; Syntax:Common-lisp -*-
+;;;-*- Coding:utf-8; Mode:LISP; -*-
 
 (in-package :wiz-util)
 
