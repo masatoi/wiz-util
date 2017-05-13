@@ -6,6 +6,9 @@ exec ros -Q -m roswell -L sbcl-bin -- $0 "$@"
 (progn
   (unless (find-package :lem)
     (ql:quickload :lem)))
+(progn
+  (unless (find-package :wiz-util)
+    (ql:quickload :wiz-util)))
 
 (defpackage :ros.script.lem.3672618460
   (:use :cl))

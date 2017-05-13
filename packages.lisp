@@ -20,7 +20,10 @@
 	   :index-list->scalar-index :scalar-index->index-list
 	   :binary-list->scalar :radix-num-list->scalar
 	   :bit-vector->integer :integer->bit-vector
-	   :random-from-probability-list :d :doc :with-open-multiple-file :nthcar :nthcdr :assoc-ref
+	   :random-from-probability-list :d :doc
+           :with-open-multiple-file
+           :openi :openo :opena :with-stream
+           :nthcar :nthcdr :assoc-ref
 	   ;; ring-buffer functions
 	   :make-ring-buffer :ring-buffer-size :ring-buffer-buffer
 	   :ring-buffer-sum :ring-buffer-average

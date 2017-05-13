@@ -15,7 +15,10 @@
     (format nil "~A"    (pathname-name p))))
 
 (defun format-pathname (p)
-  (cat (format-directory p) (format-filename p)))
+  (let ((filename (format-filename p)))
+    (if filename
+        (cat (format-directory p) (format-filename p))
+        (format-directory p))))
 
 (defun pwd (&optional relative-path)
   (if relative-path

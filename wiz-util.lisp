@@ -479,6 +479,29 @@ Examples:
 		,(if body (cons 'progn body) product))
 	     nil))))
 
+(defun openi (file &key (element-type 'cl:character) (external-format :utf-8))
+  (open file :direction :input
+        :element-type element-type
+        :external-format external-format))
+(defun openo (file &key (element-type 'cl:character) (external-format :utf-8))
+  (open file
+        :direction :output
+        :element-type element-type
+        :external-format external-format
+        :if-exists :supersede
+        :if-does-not-exist :create))
+
+(defun opena (file &key (element-type 'cl:character) (external-format :utf-8))
+  (open file
+        :direction :output
+        :element-type element-type
+        :external-format external-format
+        :if-exists :append
+        :if-does-not-exist :create))
+
+(defmacro with-stream ((var stream) &body forms-decls)
+  `(with-open-stream (,var ,stream) ,@forms-decls))
+
 ;;; 標準ではnthcdrがあってnthcarがないので
 (defun nthcar (n list)
   (nlet itr ((n n)
