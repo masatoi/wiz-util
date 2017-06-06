@@ -26,7 +26,9 @@
     (uiop:getcwd)))
 
 (defun ls (&optional dir)
-  (uiop:directory-files (if dir dir (pwd))))
+  (let ((dir (if dir dir (pwd))))
+    (append (uiop:subdirectories dir)
+            (uiop:directory-files dir))))
 
 (defun cd (dir)
   (let ((result (uiop:chdir dir)))
