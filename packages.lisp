@@ -10,7 +10,7 @@
   ;; 		:premove :premove-if :premove-if-not
   ;; 		:pdotimes)
   (:nicknames :wiz)
-  (:export :^ :nlet :mlet :while :until :bind
+  (:export :^ :def :nlet :mlet :while :until :bind
 	   :sfor :n-times :saccumulate :ssum :saverage :sprod :summation :product
 	   :existp :split :split-equally :shuffle-vector
 	   :exclusive-or :pow :tak :debug-print :make-number-list
@@ -131,7 +131,7 @@
 	   :diff-list
 	   :log-diff-list
 
-	   ;; アナフォラもexportしないと不便
+	   ;; anaphora
 	   :it
 	   :aif
 	   :acond
@@ -151,4 +151,7 @@
            ;;; Scripting
            :cat :format-directory :format-filename :format-pathname
            :pwd :ls :cd :rm :cp :mv :exec
+
+           ;;; Typed
+           :defn :tlet
 	   ))

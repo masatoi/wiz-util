@@ -11,6 +11,9 @@
 (defmacro ^ ((&rest parameter) &body body)
   `(lambda ,parameter ,@body))
 
+(defmacro def (var val &optional doc)
+  `(defparameter ,var ,val ,doc))
+
 ;;; nlet ; named-let ; 名前付きlet
 ;;  Schemeのnamed-letと同じ、繰り返し構造の簡易表現
 (defmacro nlet (tag var-vals &body body)

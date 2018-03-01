@@ -394,6 +394,30 @@
 				       (* (aref L j k) (aref L i k))))
 		     (aref L i i))))))))
 
+(defun square (x)
+  (* x x))
+
+(defun cholesky-decomposition (A L)
+  (declare (optimize (speed 3) (safety 0))
+           (type (simple-array double-float) A L))
+  (let ((dim (array-dimension A 0)))
+    (declare (type fixnum dim))
+    (setf (aref L 0 0) (sqrt (aref A 0 0)))
+    (loop for j fixnum from 1 below dim do
+      (setf (aref L j 0) (/ (aref A j 0) (aref L 0 0))))
+    (loop for i fixnum from 1 below dim do
+      (setf (aref L i i)
+            (sqrt (- (aref A i i)
+                     (loop for k fixnum from 0 below i
+                           sum (square (aref L i k))))))
+      (if (= i (1- dim))
+          L
+          (loop for j fixnum from (1+ i) below dim do
+            (setf (aref L j i)
+                  (/ (- (aref A j i)
+                        (loop for k fixnum from 0 below i sum (* (aref L j k) (aref L i k))))
+                     (aref L i i))))))))
+
 (defun det-cholesky (A)
   (let ((L (cholesky A)))
     (expt (product (i 0 (1- (array-dimension A 0)))
