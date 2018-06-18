@@ -214,6 +214,19 @@ Examples:
      (let ((read-data (read stream t nil t)))
        `(debug-print (quote ,read-data) ,read-data))))
 
+(defvar *dbg* nil)
+
+(defun debug-push (pre-exp exp)
+  (push (list pre-exp exp) *dbg*)
+  exp)
+
+(set-macro-character
+ #\RIGHTWARDS_DOUBLE_ARROW
+ #'(lambda (stream char)
+     (declare (ignore char))
+     (let ((read-data (read stream t nil t)))
+       `(debug-push (quote ,read-data) ,read-data))))
+
 (defun describe-print (symbol)
   (let ((var-description
 	 (if (boundp symbol)
