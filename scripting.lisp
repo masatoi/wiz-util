@@ -38,8 +38,14 @@
         newdir)
       nil)))
 
-(defun rm (p)
+(defun mkdir (dir)
+  (ensure-directories-exist p))
+
+(defun rm (path)
   (uiop:delete-file-if-exists p))
+
+(defun rm-r (dir)
+  (uiop:delete-directory-tree dir))
 
 (defun cp (in out)
   (uiop:copy-file in out))
