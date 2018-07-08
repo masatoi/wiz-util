@@ -147,6 +147,7 @@
 	   :map-plist
 
            :find-all-gfs
+           :case-using
 
            ;;; Scripting
            :cat :format-directory :format-filename :format-pathname

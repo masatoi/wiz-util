@@ -860,3 +860,37 @@ Examples:
    (mapcan (lambda (class)
              (copy-list (sb-mop:specializer-direct-generic-functions class)))
            (sb-mop:compute-class-precedence-list (find-class class-name)))))
+
+(defmacro case-using (pred-exp exp &body clauses)
+  (let ((temp (gensym)) (pred (gensym "PRED")))
+    `(let ((,pred ,pred-exp) (,temp ,exp))
+       (cond ,@(mapcar #'(lambda (clause)
+                           (destructuring-bind (keys . clause-forms) clause
+                             (cond ((eq keys 'otherwise)
+                                    `(t ,@clause-forms))
+                                   (t
+                                    (if (atom keys) (setq keys (list keys)))
+                                    `((member ,temp ',keys :test ,pred)
+                                      ,@clause-forms)))))
+                       clauses)))))
+;; ;; Usage
+
+;; (defparameter s "Hello")
+
+;; (case-using #'string= s
+;;   ("foo" 'foo)
+;;   ("bar" 'bar)
+;;   ("Hello" 'world))) ; => WORLD
+
+;; ;; Expansion
+
+;; (macroexpand-1 '(case-using #'string= s
+;;                  ("foo" 'foo)
+;;                  ("bar" 'bar)
+;;                  ("Hello" 'world)))
+
+;; (LET ((#:PRED574 #'STRING=) (#:G573 S))
+;;   (COND ((MEMBER #:G573 '("foo") :TEST #:PRED574) 'FOO)
+;;         ((MEMBER #:G573 '("bar") :TEST #:PRED574) 'BAR)
+;;         ((MEMBER #:G573 '("Hello") :TEST #:PRED574) 'WORLD)))
+
