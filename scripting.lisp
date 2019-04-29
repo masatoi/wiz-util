@@ -39,10 +39,10 @@
       nil)))
 
 (defun mkdir (dir)
-  (ensure-directories-exist p))
+  (ensure-directories-exist dir))
 
 (defun rm (path)
-  (uiop:delete-file-if-exists p))
+  (uiop:delete-file-if-exists path))
 
 (defun rm-r (dir)
   (uiop:delete-directory-tree dir))
